@@ -16,8 +16,8 @@ setup(
     description="DeepSearch-RL：基于 Tool-Agentic RL 的多跳搜索智能体（Qwen3-8B / veRL / SGLang / GRPO）",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    author="yongyi999",
-    url="https://github.com/yongyi999/DeepSearch-RL",
+    author="Simon11866",
+    url="https://github.com/Simon11866/DeepSearch-RL",
     packages=find_packages(exclude=("tests", "tests.*", "examples")),
     python_requires=">=3.10",
     install_requires=[

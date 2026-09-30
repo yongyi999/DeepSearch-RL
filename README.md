@@ -179,7 +179,7 @@ DeepSearch-RL/
 ### 6.2 获取工程
 
 ```bash
-git clone https://github.com/yongyi999/DeepSearch-RL.git
+git clone https://github.com/Simon11866/DeepSearch-RL.git
 cd DeepSearch-RL
 pip install -e .
 ```
