@@ -1,0 +1,68 @@
+# =============================================================================
+# DeepSearch-RL veRL 多轮工具配置（对齐官方 search_tool_example 格式）
+#
+# 挂载方式：在 grpo yaml 里设置
+#   actor_rollout_ref.rollout.multi_turn.tool_config_path=configs/tools_search_xml.yaml
+#
+# 两个工具都是「类式工具」：class_name 指向 deepsearch_rl.tools.verl_wrappers 里的类。
+# 默认经 retrieval_service_url 以 HTTP 调用独立检索服务（/retrieve、/open）；
+# 若把 retrieval_service_url 置空，则在本地用 tool_factory 直接构建真实工具执行。
+# =============================================================================
+
+tools:
+  # -------------------------------------------------------------------------
+  # 1) 搜索工具
+  # -------------------------------------------------------------------------
+  - class_name: deepsearch_rl.tools.verl_wrappers.SearchToolWrapper
+    config:
+      type: native
+      # 独立检索服务地址（只写 host:port，wrapper 会自动拼 /retrieve）
+      retrieval_service_url: http://127.0.0.1:8000
+      # 并发 / 限流 / 超时
+      num_workers: 16
+      rate_limit: 120
+      timeout: 30
+      # 检索后端与条数（本地兜底模式才用到；HTTP 模式由服务端决定后端）
+      backend: serper
+      num_results: 5
+    tool_schema:
+      type: function
+      function:
+        name: search
+        description: >-
+          调用搜索引擎进行一次网络检索，返回若干条结果（标题、URL、摘要）。
+          查询词应简洁明确，像真实搜索引擎的关键词；多跳问题请先搜索中间事实再继续。
+        parameters:
+          type: object
+          properties:
+            query:
+              type: string
+              description: 搜索查询词，简洁的关键词组合。
+          required:
+            - query
+
+  # -------------------------------------------------------------------------
+  # 2) 打开网页工具
+  # -------------------------------------------------------------------------
+  - class_name: deepsearch_rl.tools.verl_wrappers.OpenToolWrapper
+    config:
+      type: native
+      retrieval_service_url: http://127.0.0.1:8000
+      num_workers: 16
+      rate_limit: 120
+      timeout: 30
+      backend: serper
+    tool_schema:
+      type: function
+      function:
+        name: open
+        description: >-
+          打开给定 URL 并抽取网页正文。当搜索摘要不足以回答问题时，再用本工具阅读关键网页细节。
+        parameters:
+          type: object
+          properties:
+            url:
+              type: string
+              description: 要打开的网页完整 URL（http/https），通常来自搜索结果。
+          required:
+            - url

@@ -1,0 +1,45 @@
+# =============================================================================
+# DeepSearch-RL 500 题冻结评测配置
+#
+# 用法：bash scripts/eval.sh（环境变量覆盖端点；本 yaml 提供默认口径）
+# 与 ENGINEERING_SPEC 4.2 / 第 7 节对齐。
+# =============================================================================
+
+# 冻结评测集（build_eval_500.py 产出，seed=42）
+eval_file: data/eval_hard_500.jsonl
+
+# 被评模型：SGLang / vLLM 的 OpenAI 兼容端点
+# 起法示例：
+#   python -m sglang.launch_server --model-path /path/Qwen3-8B \
+#       --host 0.0.0.0 --port 30000 --served-model-name default --tp 2
+model:
+  endpoint: http://127.0.0.1:30000/v1
+  name: default
+
+# 远程 Judge（Answer / Evidence），独立 vLLM 服务
+judge:
+  base_url: http://127.0.0.1:8001/v1
+  model: judge
+
+# 检索工具（评测期 agent 直接调本地真实 search/open，含缓存/key 轮换/重试）
+search:
+  backend: ddg          # serper/serpapi/bing/brave/tavily/ddg
+  num_results: 5
+  cache_enabled: true
+
+# 运行参数
+runtime:
+  max_turns: 6          # 每题最多检索轮次
+  concurrency: 16       # 并发题数
+  limit: null           # 调试用：只跑前 N 题；null = 全量 500
+
+# 打分阈值（对齐 SPEC 3.7 / 简历口径）
+thresholds:
+  f1_correct: 0.9       # best_f1 >= 0.9 视为答案正确（跳过 Answer Judge）
+  evidence_sufficient: 0.6  # Evidence Judge score >= 0.6 判证据充分
+
+# 输出
+output:
+  dir: outputs/eval
+  # 实际文件名 metrics_<时间戳>.json，由 evaluate.py 自动生成
+  save_trajectories: false

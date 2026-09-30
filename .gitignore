@@ -1,0 +1,48 @@
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+env/
+
+# ---- 数据 / 模型（大文件不进仓库）----
+data/raw/
+data/processed/
+data/parquet/
+data/*.parquet
+data/*.jsonl
+!data/*.example.jsonl
+models/
+checkpoints/
+*.bin
+*.safetensors
+*.gguf
+*.faiss
+*.index
+
+# ---- 实验 / 日志 ----
+logs/
+outputs/
+.swancb/
+swanlog/
+wandb/
+ray/
+/tmp/
+*.log
+
+# ---- 密钥 / 本地配置 ----
+.env
+*token*.txt
+api_keys.txt
+configs/local/
+
+# ---- IDE / 系统 ----
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

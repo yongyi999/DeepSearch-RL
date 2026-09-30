@@ -1,0 +1,22 @@
+# DeepSearch-RL 远程 vLLM Judge 配置
+# 客户端默认从环境变量读 JUDGE_BASE_URL / JUDGE_MODEL；本文件供人查阅 / 统一管理。
+
+# OpenAI 兼容端点（vLLM serve 暴露的地址，注意带 /v1）
+base_url: http://127.0.0.1:8001/v1
+
+# 裁判模型名。
+# 若 judge_server 用了 --served-model-name judge，则此处必须写 "judge"；
+# 若省略 --served-model-name，则写模型路径本身（如 Qwen/Qwen3-8B）。
+model: Qwen/Qwen3-8B
+
+# 服务端启动参数
+port: 8001
+tensor_parallel_size: 1        # 8B 模型单卡即可；多卡按 GPU 数调整
+gpu_memory_utilization: 0.4    # 与训练 rollout 同机时压低，避免 OOM
+max_model_len: 8192            # judge 输入（问题+证据）+ 输出 JSON 够用
+
+# 客户端参数
+max_concurrency: 64            # 信号量限流，同时在飞的 judge 请求上限
+timeout: 60                    # 单次请求超时（秒）
+max_retries: 3                 # 网络/超时/5xx/429 的最大尝试次数
+sufficiency_threshold: 0.6     # Evidence Judge score >= 此值判 sufficient
