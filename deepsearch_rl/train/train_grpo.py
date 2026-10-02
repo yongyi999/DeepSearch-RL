@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 """
-DeepSearch-RL 主训练入口（GRPO / veRL / SGLang / 4×5090）
+DeepSearch-RL 主训练入口（GRPO / veRL / SGLang / 6×RTX 4090）
 ======================================================
 
-职责：把工程内「可读的嵌套 yaml」（configs/grpo_qwen3_8b_4x5090.yaml）翻译成
+职责：把工程内「可读的嵌套 yaml」（configs/grpo_qwen3_8b_6x4090.yaml）翻译成
 veRL 自带的 Hydra 配置（``ppo_trainer``），再调用 ``verl.trainer.main_ppo.run_ppo``。
 
 为什么要这一层包装
@@ -30,7 +30,7 @@ veRL v0.6.0 的配置是 Hydra 组合出来的，命令行习惯是 ``key=value`
 
     # 指定配置 + 任意 Hydra 覆盖（key=value 直接跟在后面即可）
     python -m deepsearch_rl.train.train_grpo \
-        --config configs/grpo_qwen3_8b_4x5090.yaml \
+        --config configs/grpo_qwen3_8b_6x4090.yaml \
         data.train_batch_size=128 actor_rollout_ref.rollout.n=5
 
     # 只看最终会下发给 veRL 的覆盖项与解析后配置，不真正起训练（本地/CI 用）
@@ -212,8 +212,8 @@ def parse_cli(argv: List[str]) -> argparse.Namespace:
     )
     parser.add_argument(
         "--config",
-        default="configs/grpo_qwen3_8b_4x5090.yaml",
-        help="主配置 yaml（默认 configs/grpo_qwen3_8b_4x5090.yaml）",
+        default="configs/grpo_qwen3_8b_6x4090.yaml",
+        help="主配置 yaml（默认 configs/grpo_qwen3_8b_6x4090.yaml）",
     )
     parser.add_argument(
         "--dry_run",

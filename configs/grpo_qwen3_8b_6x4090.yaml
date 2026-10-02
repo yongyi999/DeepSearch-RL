@@ -1,0 +1,152 @@
+# =============================================================================
+# DeepSearch-RL 主训练配置：Qwen3-8B / veRL / SGLang / GRPO，默认适配 6×RTX 4090
+#
+# 本文件是「可读的嵌套配置」，train_grpo.py 会将其拍平为 Hydra dotlist 覆盖
+# veRL 内置 ppo_trainer 配置。命令行可用 key=value 追加/覆盖（同官方用法）。
+#
+# 硬件口径：6×RTX 4090（24GB / Ada sm_89）。注意 4090 与 5090(Blackwell 32GB)
+#           显存差 8GB/卡，因此本配置按「显存紧张」档下调了 batch 与 token 预算
+#           （参照 README「十三、显存与调参」）。若换 5090 可相应上调。
+#
+# 关键口径：
+#   data.train_batch_size=42（42 prompts），rollout.n=7 → 42×7 = 294 条多轮轨迹
+#   actor.use_dynamic_bsz=True → 动态 sequence balancing（token 负载 52.8%→0.06%）
+#
+# 6 卡并行：tensor_model_parallel_size(2) × data_parallel_size(3) = 6 GPU
+# 显存若仍有富余可上调：data.train_batch_size=56/84、ppo_micro_batch_size_per_gpu=3/4、
+#                       gpu_memory_utilization=0.55。
+# =============================================================================
+
+# ---- 模型路径（由环境变量 MODEL_PATH 注入，或在 train.sh 里用 key=value 覆盖）----
+
+trainer:
+  total_epochs: 1
+  total_training_steps: null
+  n_gpus_per_node: 6
+  nnodes: 1
+  save_freq: 20
+  test_freq: 20
+  val_before_train: false
+  val_only: false
+  project_name: deepsearch-rl
+  experiment_name: qwen3-8b-grpo-search
+  logger:
+    - console
+    - swanlab
+  default_local_dir: checkpoints/deepsearch-rl/qwen3-8b
+  resume_mode: auto
+  max_actor_ckpt_to_keep: 2
+
+data:
+  train_files:
+    - data/processed/train
+  val_files:
+    - data/processed/val
+  prompt_key: prompt
+  reward_fn_key: data_source
+  train_batch_size: 42          # 42 prompts / step（每卡 7，24GB 显存保守档）
+  val_batch_size: 21
+  max_prompt_length: 1024
+  max_response_length: 12288
+  return_raw_chat: true
+  shuffle: true
+  dataloader_num_workers: 4
+  filter_overlong_prompts: true
+  truncation: left
+  apply_chat_template_kwargs:
+    enable_thinking: false
+
+actor_rollout_ref:
+  hybrid_engine: true
+  model:
+    path: ${oc.env:MODEL_PATH}
+    dtype: bfloat16
+    enable_gradient_checkpointing: true
+    use_liger: true
+    trust_remote_code: false
+  rollout:
+    name: sglang
+    mode: async
+    n: 7                        # 每个 prompt 采样 7 条 → 42×7 = 294 条轨迹
+    temperature: 1.0
+    top_p: 0.95
+    top_k: -1
+    dtype: bfloat16
+    tensor_model_parallel_size: 2
+    data_parallel_size: 3
+    gpu_memory_utilization: 0.45   # 24GB 显存调低，给 KV cache 与 rollout 留空间
+    max_num_batched_tokens: 12288
+    max_num_seqs: 256
+    enable_chunked_prefill: true
+    enable_prefix_caching: true
+    enforce_eager: false
+    free_cache_engine: true
+    skip_tokenizer_init: true
+    multi_turn:
+      enable: true
+      format: search_xml
+      max_assistant_turns: 6
+      max_user_turns: 6
+      max_parallel_calls: 3
+      max_tool_response_length: 2048
+      tool_response_truncate_side: middle
+      tool_config_path: configs/tools_search_xml.yaml
+      tokenization_sanity_check_mode: ignore_strippable
+    agent:
+      num_workers: 16
+      default_agent_loop: deepsearch_agent
+    val_kwargs:
+      temperature: 0
+      top_p: 1.0
+      top_k: -1
+      do_sample: false
+      n: 1
+  actor:
+    strategy: fsdp
+    ppo_micro_batch_size_per_gpu: 2   # 24GB 显存从 4 降到 2
+    use_dynamic_bsz: true
+    ppo_max_token_len_per_gpu: 8000   # 从 12000 下调
+    use_kl_loss: true
+    kl_loss_coef: 0.001
+    kl_loss_type: low_var_kl
+    state_masking: true
+    ppo_epochs: 1
+    shuffle: true
+    entropy_coeff: 0.001
+    use_liger: true
+    clip_ratio: 0.2
+    grad_clip: 1.0
+    optim:
+      lr: 1.0e-6
+      weight_decay: 0.0
+      lr_warmup_steps_ratio: 0.05
+      lr_scheduler_type: constant
+  ref:
+    strategy: fsdp
+
+algorithm:
+  adv_estimator: grpo
+  norm_adv_by_std_in_grpo: true
+  gamma: 1.0
+  lam: 1.0
+
+reward_model:
+  enable: false
+  enable_resource_pool: false
+
+custom_reward_function:
+  path: deepsearch_rl/rewards/hierarchical.py
+  name: compute_score
+
+# -----------------------------------------------------------------------------
+# 以下为「非 veRL」段：train_grpo.py 读取后设置环境变量，不会传给 Hydra
+# -----------------------------------------------------------------------------
+# ---- 检索服务（供 wrapper 调用；与 start_retrieval.sh 端口保持一致）----
+retrieval:
+  service_url: http://127.0.0.1:8000
+  concurrency: 120
+# ---- 远程 Judge（供 reward 调用；与 start_judge.sh 端口保持一致）----
+judge:
+  base_url: http://127.0.0.1:8001/v1
+  model: judge
+  sufficiency_threshold: 0.6

@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # =============================================================================
-# DeepSearch-RL AutoDL 环境一键安装（Ubuntu + 4×RTX 5090 32GB / sm_120）
+# DeepSearch-RL AutoDL 环境一键安装（Ubuntu + 6×RTX 4090 24GB / sm_89）
 #
-# 目标：Python 3.12 + CUDA 12.8 + PyTorch 2.8.0+cu128 + verl v0.6.0 + sglang(≤0.5.19)
+# 目标：Python 3.12 + CUDA 12.4 + PyTorch 2.8.0+cu124 + verl v0.6.0 + sglang(≤0.5.19)
 #
 # 用法（在 AutoDL 实例内，工程根目录执行）：
 #   bash scripts/install_autodl.sh
@@ -25,20 +25,20 @@ PY=${PYTHON:-python}
 echo "[info] 使用解释器： $($PY --version 2>&1)"
 echo "[info] pip：       $($PY -m pip --version 2>&1)"
 
-# AutoDL 常见：CUDA 12.8 已预装；若没有 nvcc 提示一下（不强制）
+# AutoDL 常见：CUDA 12.4 已预装；若没有 nvcc 提示一下（不强制）
 if ! command -v nvcc >/dev/null 2>&1; then
     echo "[提示] 未检测到 nvcc（仅编译 flash-attn 等需要；本流程用 liger-kernel 免编译，可忽略）"
 fi
 
 # ---------------------------------------------------------------------------
-# [2/7] 安装 PyTorch 2.8.0 + cu128（5090 sm_120 必须 cu128 车道）
+# [2/7] 安装 PyTorch 2.8.0 + cu124（4090 Ada sm_89 用 cu124 车道）
 # ---------------------------------------------------------------------------
 echo "======================================================================"
-echo "[2/7] 安装 torch==2.8.0 cu128"
+echo "[2/7] 安装 torch==2.8.0 cu124"
 echo "======================================================================"
 $PY -m pip install \
     torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
-    --index-url https://download.pytorch.org/whl/cu128
+    --index-url https://download.pytorch.org/whl/cu124
 
 # ---------------------------------------------------------------------------
 # [3/7] 安装通用 python 依赖（对齐 requirements.txt 的版本口径）
@@ -84,20 +84,20 @@ $PY -m pip install -e ".[sglang]"
 cd - >/dev/null
 
 # ---------------------------------------------------------------------------
-# [5/7] sglang 版本二次固定 + flashinfer (cu128)
+# [5/7] sglang 版本二次固定 + flashinfer (cu124)
 # ---------------------------------------------------------------------------
 echo "======================================================================"
-echo "[5/7] 固定 sglang<=0.5.19 并安装 flashinfer-cu128"
+echo "[5/7] 固定 sglang<=0.5.19 并安装 flashinfer-cu124"
 echo "======================================================================"
 # verl 的 requirements_sglang.txt 已 pin；这里再显式固定一次，防止 pip 自动升新
 $PY -m pip install "sglang>=0.4.6.post1,<0.5.20"
-# flashinfer 必须 cu128 车道（5090 sm_120）；用 sglang 推荐的 find-links
+# flashinfer 用 cu124 车道（4090 sm_89）；用 sglang 推荐的 find-links
 $PY -m pip install \
     "flashinfer_python" \
-    --find-links https://flashinfer.ai/whl/cu128/torch2.8/flashinfer-python
+    --find-links https://flashinfer.ai/whl/cu124/torch2.8/flashinfer-python
 
 # ---------------------------------------------------------------------------
-# [6/7] liger-kernel（免编译的 kernel，5090 上替代 flash-attn）
+# [6/7] liger-kernel（免编译的 kernel，4090 上替代 flash-attn）
 # ---------------------------------------------------------------------------
 echo "======================================================================"
 echo "[6/7] 安装 liger-kernel"

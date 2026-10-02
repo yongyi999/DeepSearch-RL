@@ -1,5 +1,5 @@
 # =============================================================================
-# DeepSearch-RL 依赖（Python 3.12 / CUDA 12.8 / 4×RTX 5090）
+# DeepSearch-RL 依赖（Python 3.12 / CUDA 12.4 / 6×RTX 4090）
 #
 # 注意：torch / sglang / verl 需要按 README「环境搭建」用特殊 index 或源码安装，
 # 本文件只固定其余通用依赖，避免 pip 自动解析到错误的 CUDA 车道。
@@ -21,8 +21,8 @@ ray[data,train,tune,serve]>=2.45.0,<2.49
 
 # ---- 训练侧 kernel（免编译 flash-attn 的替代）----
 liger-kernel>=0.8.2
-# 如确需 FlashAttention-2（非 FA3/4，5090 sm_120 需 >=2.7.2，且 nvcc=12.8）：
-#   pip install "flash-attn>=2.7.2" --no-build-isolation
+# 如确需 FlashAttention-2（非 FA3/4，4090 sm_89 需 >=2.6.1，且 nvcc=12.4）：
+#   pip install "flash-attn>=2.6.1" --no-build-isolation
 
 # ---- 通用训练栈 ----
 transformers>=4.51.0

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ============================================================
 # DeepSearch-RL 数据一键下载 / 评测集构建 / 训练 parquet 预处理
-# 面向 Ubuntu + bash（AutoDL 4xRTX5090）。
+# 面向 Ubuntu + bash（AutoDL 6xRTX4090）。
 #
 # 用法：
 #   bash scripts/download_data.sh

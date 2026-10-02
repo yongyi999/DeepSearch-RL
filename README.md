@@ -12,7 +12,7 @@
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12-green.svg)]()
-[![PyTorch](https://img.shields.io/badge/PyTorch-2.8.0%20cu128-orange.svg)]()
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.8.0%20cu124-orange.svg)]()
 [![veRL](https://img.shields.io/badge/veRL-v0.6.0-red.svg)]()
 
 </div>
@@ -26,7 +26,7 @@
 - [三、效果指标（复现口径）](#三效果指标复现口径)
 - [四、系统架构](#四系统架构)
 - [五、目录结构](#五目录结构)
-- [六、环境搭建（AutoDL 4×5090）](#六环境搭建autodl-45090)
+- [六、环境搭建（AutoDL 6×4090）](#六环境搭建autodl-64090)
 - [七、数据准备](#七数据准备)
 - [八、启动检索服务](#八启动检索服务)
 - [九、启动远程 Judge](#九启动远程-judge)
@@ -90,9 +90,9 @@ DeepSearch-RL 让一个基座大模型（Qwen3-8B）通过**强化学习**学会
 
 ```
                          ┌──────────────────────────────────────────────┐
-                         │  训练进程（Ray + veRL，4×5090）                │
+                         │  训练进程（Ray + veRL，6×RTX 4090）               │
    parquet 训练集  ────▶ │  GRPO RayPPOTrainer                          │
-   (56 prompts/step)     │    │                                         │
+   (42 prompts/step)     │    │                                         │
                          │    ▼                                         │
                          │  DeepSearchAgentLoop（deepsearch_agent）       │
                          │    ├─ SGLang 生成（TITO token 层拼接）          │
@@ -114,7 +114,7 @@ DeepSearch-RL 让一个基座大模型（Qwen3-8B）通过**强化学习**学会
 
 **一次训练 step 的流程：**
 
-1. 从训练 parquet 采样 56 个 prompt，每个 prompt 采样 7 条 → 并行生成 **392 条多轮交互轨迹**；
+1. 从训练 parquet 采样 42 个 prompt，每个 prompt 采样 7 条 → 并行生成 **294 条多轮交互轨迹**；
 2. 每条轨迹在 SGLang 上生成，`search_xml_parser` 解析 `<search>/<open>` 标签；
 3. 工具 wrapper 通过 HTTP 调用检索服务（命中缓存则直接返回），观测以 `<observation>` 拼回，进入下一轮；
 4. 模型给出 `<answer>` 或达到轮数上限后结束；
@@ -136,7 +136,7 @@ DeepSearch-RL/
 ├── setup.py
 ├── run.sh                        # 一键编排（retrieval/judge/train/eval/install/model）
 ├── configs/
-│   ├── grpo_qwen3_8b_4x5090.yaml # 主训练配置（默认 4×5090）
+│   ├── grpo_qwen3_8b_6x4090.yaml # 主训练配置（默认 6×RTX 4090）
 │   ├── tools_search_xml.yaml     # veRL 工具注册（search/open wrapper）
 │   ├── judge.yaml                # Judge 配置
 │   └── eval_500.yaml             # 评估配置
@@ -168,13 +168,13 @@ DeepSearch-RL/
 
 ---
 
-## 六、环境搭建（AutoDL 4×5090）
+## 六、环境搭建（AutoDL 6×4090）
 
 ### 6.1 租机与镜像
 
-- 在 AutoDL 租用 **4×RTX 5090（32GB，Blackwell sm_120）**；
-- 镜像选择 **Ubuntu 22.04/24.04 + Python 3.12 + CUDA 12.8**；
-- 5090 是 Blackwell 新架构，**必须使用 CUDA 12.8 + PyTorch cu128 车道**（cu126 及以下不含 sm_120 kernel）。
+- 在 AutoDL 租用 **6×RTX 4090（24GB，Ada sm_89）**；
+- 镜像选择 **Ubuntu 22.04/24.04 + Python 3.12 + CUDA 12.4**；
+- 4090 是 Ada 架构，**使用 CUDA 12.4 + PyTorch cu124 车道**即可（无需 cu128；cu128 仅 Blackwell 需要）。
 
 ### 6.2 获取工程
 
@@ -190,15 +190,15 @@ pip install -e .
 bash scripts/install_autodl.sh
 ```
 
-该脚本会依次完成：PyTorch 2.8.0 cu128 → 通用依赖 → veRL v0.6.0（源码 editable，`[sglang]`）
-→ 固定 sglang ≤0.5.19 + flashinfer cu128 → liger-kernel。可重复执行。
+该脚本会依次完成：PyTorch 2.8.0 cu124 → 通用依赖 → veRL v0.6.0（源码 editable，`[sglang]`）
+→ 固定 sglang ≤0.5.19 + flashinfer cu124 → liger-kernel。可重复执行。
 
 ### 6.4 手动安装（如需逐步控制）
 
 ```bash
-# 1) PyTorch 2.8.0 cu128（5090 必须）
+# 1) PyTorch 2.8.0 cu124（4090 用 cu124）
 pip install torch==2.8.0 torchvision==0.23.0 torchaudio==2.8.0 \
-  --index-url https://download.pytorch.org/whl/cu128
+  --index-url https://download.pytorch.org/whl/cu124
 
 # 2) 通用依赖
 pip install -r requirements.txt
@@ -212,14 +212,14 @@ cd -
 # 4) sglang 固定 cu12 车道（0.5.19 是最后一个 CUDA12 版本，勿升 0.5.20+）
 pip install "sglang>=0.4.6.post1,<0.5.20"
 pip install flashinfer_python \
-  --find-links https://flashinfer.ai/whl/cu128/torch2.8/flashinfer-python
+  --find-links https://flashinfer.ai/whl/cu124/torch2.8/flashinfer-python
 
-# 5) 免编译 kernel（5090 上替代 flash-attn）
+# 5) 免编译 kernel（4090 上替代 flash-attn）
 pip install "liger-kernel>=0.8.2"
 ```
 
-> **关于 flash-attn**：FlashAttention-3/4 面向数据中心 Blackwell（sm_100，带 TMEM），**在桌面 5090（sm_120）上无法运行**；
-> 如确需 FlashAttention-2，需 `flash-attn>=2.7.2`（含 sm_120 kernel）且本机 nvcc=12.8。
+> **关于 flash-attn**：FlashAttention-3/4 面向数据中心 Blackwell（sm_100，带 TMEM），**在 4090（sm_89）上不适用**；
+> 4090 用 FlashAttention-2（`flash-attn>=2.6.1`，含 sm_89 kernel）即可，需本机 nvcc=12.4。
 > 本工程默认用 **liger-kernel + SDPA**（训练）与 SGLang 的 `triton/flashinfer` 后端（推理），免编译。
 
 ### 6.5 关键依赖版本一览
@@ -227,11 +227,11 @@ pip install "liger-kernel>=0.8.2"
 | 包 | 版本 | 备注 |
 |---|---|---|
 | Python | 3.12 | |
-| CUDA | 12.8 | 5090 必须 |
-| torch / torchvision / torchaudio | 2.8.0 / 0.23.0 / 2.8.0 | cu128 index |
+| CUDA | 12.4 | 4090 用 cu124 |
+| torch / torchvision / torchaudio | 2.8.0 / 0.23.0 / 2.8.0 | cu124 index |
 | verl | **v0.6.0** | 源码 editable，勿用 main |
 | sglang | **≥0.4.6, <0.5.20** | 最后 CUDA12 车道 |
-| flashinfer | cu128/torch2.8 | 对应 find-links |
+| flashinfer | cu124/torch2.8 | 对应 find-links |
 | vllm（Judge 服务） | 随 verl v0.6.0 | OpenAI 兼容端点 |
 | liger-kernel | ≥0.8.2 | 免编译 kernel |
 | modelscope | 1.23.1 | 模型/数据下载 |
@@ -401,9 +401,9 @@ MODEL_PATH=$HOME/models/Qwen3-8B \
   python -m deepsearch_rl.train.train_grpo --dry_run
 ```
 
-### 默认配置口径（4×5090）
+### 默认配置口径（6×RTX 4090，configs/grpo_qwen3_8b_6x4090.yaml）
 
-- `data.train_batch_size=56`（56 prompts），`rollout.n=7` → **56×7 = 392 条多轮轨迹**；
+- `data.train_batch_size=42`（42 prompts），`rollout.n=7` → **42×7 = 294 条多轮轨迹**（24GB 显存保守档，可按显存上调）；
 - `rollout.name=sglang`、`rollout.mode=async`、`multi_turn.enable=True`、`multi_turn.format=search_xml`；
 - `agent.default_agent_loop=deepsearch_agent`；
 - `actor.use_dynamic_bsz=True`（动态 sequence balancing）、`state_masking=True`；
@@ -453,17 +453,17 @@ bash scripts/eval.sh --compare outputs/eval/metrics_baseline.json outputs/eval/m
 
 ## 十三、显存与调参
 
-### 13.1 显存估算（4×5090 32GB）
+### 13.1 显存估算（6×4090 24GB）
 
-- **训练态**：FSDP 分片 bf16 参数 + bf16 梯度 + fp32 Adam 状态约 **24GB/卡**，配合梯度检查点与动态 batch，可在 32GB 内；
-- **Rollout 态**：SGLang 默认 `TP=2 / DP=2`，权重分片 + KV 缓存由 `gpu_memory_utilization`（默认 0.55）控制；
+- **训练态**：FSDP 分片 bf16 参数 + bf16 梯度 + fp32 Adam 状态约 **22–24GB/卡**，已贴近 24GB 上限，需依赖梯度检查点 + 动态 batch（`use_dynamic_bsz`）+ 调低 `ppo_micro_batch_size_per_gpu`（默认 2）；仍 OOM 则按 13.2 降档；
+- **Rollout 态**：SGLang 默认 `TP=2 / DP=3`，权重分片 + KV 缓存由 `gpu_memory_utilization`（默认 0.45）控制；
 - 训练与 rollout 不同时占用全部资源（hybrid engine 在阶段切换时 offload/释放）。
 
 ### 13.2 显存紧张时（按优先级）
 
 1. 降低 `rollout.n`（7→5），直接减少并发轨迹数；
-2. 降低 `gpu_memory_utilization`（0.55→0.45）；
-3. 降低 `actor.ppo_micro_batch_size_per_gpu`（4→2）、`ppo_max_token_len_per_gpu`；
+2. 降低 `gpu_memory_utilization`（0.45→0.35）；
+3. 降低 `actor.ppo_micro_batch_size_per_gpu`（2→1）、`ppo_max_token_len_per_gpu`；
 4. 缩短 `max_response_length` / `max_tool_response_length`；
 5. 开启 actor CPU offload（`actor_rollout_ref.actor` 对应 offload 项），用显存换速度。
 
@@ -481,13 +481,12 @@ bash scripts/eval.sh --compare outputs/eval/metrics_baseline.json outputs/eval/m
 
 ## 十四、常见问题 FAQ
 
-**Q1：为什么必须用 cu128 / torch 2.8.0？**
-RTX 5090 是 Blackwell sm_120，cu126 及以下 wheel 不含该架构 kernel，会报 `no kernel image available`。
-务必用 `--index-url https://download.pytorch.org/whl/cu128`。
+**Q1：CUDA / torch 车道怎么选？**
+RTX 4090 是 Ada sm_89，用 **cu124 车道**（`--index-url https://download.pytorch.org/whl/cu124`）即可；若换 5090（Blackwell sm_120）才需 cu128（cu126 及以下不含其 kernel）。
 
 **Q2：为什么 pin verl v0.6.0、sglang ≤0.5.19？**
-verl main 与 sglang 0.5.20+ 已迁移到 CUDA 13 / torch 2.13+，与本工程 cu128/torch2.8 车道冲突，
-会拉到无法在 5090 上运行的依赖。
+verl main 与 sglang 0.5.20+ 已迁移到 CUDA 13 / torch 2.13+，与本工程 cu124/torch2.8 车道冲突，
+会拉到无法在 4090 上运行的依赖。
 
 **Q3：不买搜索 API 能跑吗？**
 可以，`SEARCH_BACKEND=ddg` 使用免费 DuckDuckGo（无需 key），但稳定性与召回不如付费服务，建议仅用于调试。
@@ -500,6 +499,7 @@ verl main 与 sglang 0.5.20+ 已迁移到 CUDA 13 / torch 2.13+，与本工程 c
 不会。veRL 对工具返回 token 自动标 `response_mask=0`，策略梯度只在模型自己生成的 token 上计算。
 
 **Q6：如何调整并行度适配不同卡数？**
+- 6 卡（默认配置 `configs/grpo_qwen3_8b_6x4090.yaml`）：`n_gpus_per_node=6`，`rollout.tensor_model_parallel_size=2, data_parallel_size=3`，`train_batch_size=42`（24GB 显存保守档，可按显存上调至 56/84）；
 - 8 卡：`trainer.n_gpus_per_node=8`，可把 `rollout.data_parallel_size` 提到 4、`train_batch_size` 提到 112；
 - 2 卡：`n_gpus_per_node=2`，`rollout.tensor_model_parallel_size=2, data_parallel_size=1`，`train_batch_size=28`。
 

@@ -43,4 +43,4 @@ fi
 # PY
 
 echo ">>> 取消上方任一方式的注释即可开始下载。"
-echo ">>> 下载完成后，把 MODEL_PATH 指向 ${MODEL_DIR} 即可在 configs/grpo_qwen3_8b_4x5090.yaml 中使用。"
+echo ">>> 下载完成后，把 MODEL_PATH 指向 ${MODEL_DIR} 即可在 configs/grpo_qwen3_8b_6x4090.yaml 中使用。"

@@ -5,7 +5,7 @@
 # 用法：
 #   bash run.sh retrieval     # 终端 A：起检索服务（FastAPI，:8000）
 #   bash run.sh judge          # 终端 B：起远程 Judge（vLLM openai 协议，:8001）
-#   bash run.sh train          # 终端 C：起 veRL 训练（4×5090）
+#   bash run.sh train          # 终端 C：起 veRL 训练（6×RTX 4090）
 #   bash run.sh eval           # 跑 500 题冻结评测（eval_hard_500.jsonl）
 #   bash run.sh all            # 打印「分别开 3 个终端」的标准启动说明（默认演示）
 #   bash run.sh install        # 调用 scripts/install_autodl.sh 装环境

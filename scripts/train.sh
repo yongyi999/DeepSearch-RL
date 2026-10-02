@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # =============================================================================
-# DeepSearch-RL 训练启动脚本（4×5090 / veRL / SGLang / GRPO）
+# DeepSearch-RL 训练启动脚本（6×RTX 4090 / veRL / SGLang / GRPO）
 #
 # 用法：
-#   bash scripts/train.sh                       # 用默认 configs/grpo_qwen3_8b_4x5090.yaml
-#   bash scripts/train.sh data.train_batch_size=128   # 后面的 key=value 直接透传 Hydra
+#   bash scripts/train.sh                       # 用默认 configs/grpo_qwen3_8b_6x4090.yaml
+#   bash scripts/train.sh data.train_batch_size=56   # 后面的 key=value 直接透传 Hydra
 #
 # 前置（另外两个终端里要先起好）：
 #   - 检索服务：  bash scripts/start_retrieval.sh     (默认 127.0.0.1:8000)
@@ -42,5 +42,5 @@ echo "[info] SWANLAB_MODE=${SWANLAB_MODE:-cloud}"
 
 # ---- 2) 启动训练（剩余参数原样透传）----
 exec python -m deepsearch_rl.train.train_grpo \
-    --config configs/grpo_qwen3_8b_4x5090.yaml \
+    --config configs/grpo_qwen3_8b_6x4090.yaml \
     "$@"
